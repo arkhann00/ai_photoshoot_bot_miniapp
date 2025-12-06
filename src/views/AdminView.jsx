@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "./AdminView.css";
 
-const API_BASE =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE = "http://62.113.42.113:8001/api";
 
 /* ---------- API helpers ---------- */
 

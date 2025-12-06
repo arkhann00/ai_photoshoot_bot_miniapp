@@ -1,7 +1,6 @@
 // src/api.js
 
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE_URL = "http://62.113.42.113:8001/api";
 
 async function apiFetch(path, options = {}) {
     const url = `${API_BASE_URL}${path}`;
