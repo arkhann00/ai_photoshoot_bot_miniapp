@@ -1,6 +1,7 @@
 // src/api.js
 
 const API_BASE_URL = "http://62.113.42.113:8001/api";
+// const API_BASE_URL = "http://0.0.0.0:8000/api";
 
 async function apiFetch(path, options = {}) {
     const url = `${API_BASE_URL}${path}`;

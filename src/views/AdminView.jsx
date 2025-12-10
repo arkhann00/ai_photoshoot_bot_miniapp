@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import "./AdminView.css";
 
 const API_BASE = "http://62.113.42.113:8001/api";
+// const API_BASE = "http://0.0.0.0:8000/api";
 
 /* ---------- API helpers ---------- */
 
@@ -17,6 +18,79 @@ async function adminGetCategories() {
 
     return res.json();
 }
+
+async function adminUpdateCategory({ id, title, description, gender, file }) {
+    const form = new FormData();
+
+    if (title !== undefined && title !== null) {
+        form.append("title", title);
+    }
+    if (description !== undefined && description !== null) {
+        form.append("description", description);
+    }
+    if (gender !== undefined && gender !== null) {
+        form.append("gender", gender);
+    }
+    if (file) {
+        form.append("image", file);
+    }
+
+    const res = await fetch(`${API_BASE}/admin/style-categories/${id}`, {
+        method: "PUT",
+        body: form,
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(
+            `Ошибка обновления категории: ${res.status} ${text}`,
+        );
+    }
+
+    return res.json();
+}
+
+async function adminUpdateStyle({
+                                    id,
+                                    title,
+                                    description,
+                                    prompt,
+                                    categoryId,
+                                    file,
+                                }) {
+    const form = new FormData();
+
+    if (title !== undefined && title !== null) {
+        form.append("title", title);
+    }
+    if (description !== undefined && description !== null) {
+        form.append("description", description);
+    }
+    if (prompt !== undefined && prompt !== null) {
+        form.append("prompt", prompt);
+    }
+    if (categoryId !== undefined && categoryId !== null) {
+        form.append("category_id", String(categoryId));
+    }
+    if (file) {
+        form.append("image", file);
+    }
+
+    const res = await fetch(`${API_BASE}/admin/styles/${id}`, {
+        method: "PUT",
+        body: form,
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Ошибка обновления стиля: ${res.status} ${text}`);
+    }
+
+    return res.json();
+}
+
 
 async function adminCreateCategory({ title, description, gender, file }) {
     const form = new FormData();
@@ -201,18 +275,31 @@ function formatDateTime(value) {
 
 /* ---------- UI блоки ---------- */
 
-function CategoryChip({ category, onDelete }) {
+function CategoryChip({ category, onDelete, onSelect, isActive }) {
     const labelGender = category.gender === "female" ? "Ж" : "М";
 
+    function handleClick() {
+        onSelect(category);
+    }
+
+    function handleDeleteClick(event) {
+        event.stopPropagation();
+        onDelete(category.id);
+    }
+
+    const className = isActive
+        ? "admin-chip admin-chip--active"
+        : "admin-chip";
+
     return (
-        <div className="admin-chip">
+        <div className={className} onClick={handleClick}>
             <span className="admin-chip__text">
                 {category.title} · {labelGender}
             </span>
             <button
                 type="button"
                 className="admin-chip__delete"
-                onClick={() => onDelete(category.id)}
+                onClick={handleDeleteClick}
                 title="Удалить категорию"
             >
                 ✕
@@ -221,11 +308,14 @@ function CategoryChip({ category, onDelete }) {
     );
 }
 
+
 function AdminCategoriesBlock({
                                   categories,
                                   onReload,
                                   onDeleteCategory,
                                   deletingId,
+                                  selectedCategoryId,
+                                  onSelectCategory,
                               }) {
     const hasCategories = categories.length > 0;
 
@@ -255,6 +345,8 @@ function AdminCategoriesBlock({
                             key={cat.id}
                             category={cat}
                             onDelete={onDeleteCategory}
+                            onSelect={onSelectCategory}
+                            isActive={selectedCategoryId === cat.id}
                         />
                     ))}
                     {deletingId !== null && (
@@ -266,6 +358,7 @@ function AdminCategoriesBlock({
     );
 }
 
+
 function AdminStylesBlock({
                               styles,
                               loading,
@@ -273,6 +366,8 @@ function AdminStylesBlock({
                               onDeleteStyle,
                               deletingId,
                               hasCategorySelected,
+                              selectedStyleId,
+                              onSelectStyle,
                           }) {
     return (
         <section className="admin-section admin-section--compact">
@@ -305,51 +400,72 @@ function AdminStylesBlock({
 
             {hasCategorySelected && !loading && styles.length > 0 && (
                 <div className="admin-style-list">
-                    {styles.map((style) => (
-                        <div key={style.id} className="admin-style-item">
-                            <div className="admin-style-item__row">
-                                <div className="admin-style-item__main">
-                                    <div className="admin-style-item__title">
-                                        {style.title}
-                                    </div>
-                                    {style.description && (
-                                        <div className="admin-style-item__description">
-                                            {style.description}
+                    {styles.map((style) => {
+                        const itemClassName =
+                            selectedStyleId === style.id
+                                ? "admin-style-item admin-style-item--active"
+                                : "admin-style-item";
+
+                        function handleClick() {
+                            onSelectStyle(style);
+                        }
+
+                        function handleDeleteClick(event) {
+                            event.stopPropagation();
+                            onDeleteStyle(style.id);
+                        }
+
+                        return (
+                            <div
+                                key={style.id}
+                                className={itemClassName}
+                                onClick={handleClick}
+                            >
+                                <div className="admin-style-item__row">
+                                    <div className="admin-style-item__main">
+                                        <div className="admin-style-item__title">
+                                            {style.title}
                                         </div>
+                                        {style.description && (
+                                            <div className="admin-style-item__description">
+                                                {style.description}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="admin-style-item__delete"
+                                        onClick={handleDeleteClick}
+                                        disabled={deletingId === style.id}
+                                        title="Удалить стиль"
+                                    >
+                                        {deletingId === style.id ? "…" : "✕"}
+                                    </button>
+                                </div>
+                                <div className="admin-style-item__meta">
+                                    <span className="admin-style-item__badge">
+                                        #{style.id}
+                                    </span>
+                                    <span className="admin-style-item__badge">
+                                        {style.gender === "female"
+                                            ? "Женская категория"
+                                            : "Мужская категория"}
+                                    </span>
+                                    {!style.is_active && (
+                                        <span className="admin-style-item__badge admin-style-item__badge--inactive">
+                                            Неактивен
+                                        </span>
                                     )}
                                 </div>
-                                <button
-                                    type="button"
-                                    className="admin-style-item__delete"
-                                    onClick={() => onDeleteStyle(style.id)}
-                                    disabled={deletingId === style.id}
-                                    title="Удалить стиль"
-                                >
-                                    {deletingId === style.id ? "…" : "✕"}
-                                </button>
                             </div>
-                            <div className="admin-style-item__meta">
-                                <span className="admin-style-item__badge">
-                                    #{style.id}
-                                </span>
-                                <span className="admin-style-item__badge">
-                                    {style.gender === "female"
-                                        ? "Женская категория"
-                                        : "Мужская категория"}
-                                </span>
-                                {!style.is_active && (
-                                    <span className="admin-style-item__badge admin-style-item__badge--inactive">
-                                        Неактивен
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </section>
     );
 }
+
 
 function CategoryForm({
                           title,
@@ -362,10 +478,22 @@ function CategoryForm({
                           onChangeFile,
                           onSubmit,
                           submitting,
+                          isEdit,
+                          onResetSelection,
                       }) {
+    const heading = isEdit ? "Редактирование категории" : "Новая категория";
+
+    const buttonLabel = submitting
+        ? isEdit
+            ? "Сохраняем…"
+            : "Создаём…"
+        : isEdit
+            ? "Сохранить изменения"
+            : "Создать категорию";
+
     return (
         <>
-            <h2 className="admin-box__title">Новая категория</h2>
+            <h2 className="admin-box__title">{heading}</h2>
             <p className="admin-box__hint">
                 Категория объединяет несколько стилей. Например: «Vogue», «Dubai»,
                 «Аниме».
@@ -434,11 +562,23 @@ function CategoryForm({
                 onClick={onSubmit}
                 disabled={submitting}
             >
-                {submitting ? "Создаём…" : "Создать категорию"}
+                {buttonLabel}
             </button>
+
+            {isEdit && (
+                <button
+                    type="button"
+                    className="admin-button admin-button--ghost admin-button--full"
+                    onClick={onResetSelection}
+                    disabled={submitting}
+                >
+                    Сбросить выбор
+                </button>
+            )}
         </>
     );
 }
+
 
 function StyleForm({
                        title,
@@ -454,6 +594,8 @@ function StyleForm({
                        onChangeFile,
                        onSubmit,
                        submitting,
+                       isEdit,
+                       onResetSelection,
                    }) {
     const hasCategories = categories.length > 0;
 
@@ -469,9 +611,19 @@ function StyleForm({
         [categories],
     );
 
+    const heading = isEdit ? "Редактирование стиля" : "Новый стиль";
+
+    const buttonLabel = submitting
+        ? isEdit
+            ? "Сохраняем…"
+            : "Создаём…"
+        : isEdit
+            ? "Сохранить изменения"
+            : "Создать стиль";
+
     return (
         <>
-            <h2 className="admin-box__title">Новый стиль</h2>
+            <h2 className="admin-box__title">{heading}</h2>
             <p className="admin-box__hint">
                 Стиль относится к выбранной категории и наследует её пол.
             </p>
@@ -568,8 +720,19 @@ function StyleForm({
                 onClick={onSubmit}
                 disabled={submitting || !hasCategories || !categoryId}
             >
-                {submitting ? "Создаём…" : "Создать стиль"}
+                {buttonLabel}
             </button>
+
+            {isEdit && (
+                <button
+                    type="button"
+                    className="admin-button admin-button--ghost admin-button--full"
+                    onClick={onResetSelection}
+                    disabled={submitting}
+                >
+                    Сбросить выбор
+                </button>
+            )}
         </>
     );
 }
@@ -855,6 +1018,9 @@ function AdminView() {
     const [section, setSection] = useState("builder"); // "builder" | "stats" | "admins"
     const [mode, setMode] = useState("category"); // "category" | "style"
 
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+    const [selectedStyleId, setSelectedStyleId] = useState(null);
+
     const [categories, setCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
     const [deletingCategoryId, setDeletingCategoryId] = useState(null);
@@ -958,7 +1124,25 @@ function AdminView() {
         }
     }
 
-    async function handleCreateCategory() {
+    function handleResetCategorySelection() {
+        setSelectedCategoryId(null);
+        setCatTitle("");
+        setCatDescription("");
+        setCatGender("female");
+        setCatFile(null);
+    }
+
+    function handleSelectCategory(category) {
+        setSelectedCategoryId(category.id);
+        setCatTitle(category.title || "");
+        setCatDescription(category.description || "");
+        setCatGender(category.gender || "female");
+        setCatFile(null);
+        setStyleCategoryId(category.id);
+        setSelectedStyleId(null);
+    }
+
+    async function handleSubmitCategory() {
         if (!catTitle.trim()) {
             setError("Заполни название категории.");
             return;
@@ -969,22 +1153,38 @@ function AdminView() {
             setError("");
             setSuccess("");
 
-            const created = await adminCreateCategory({
-                title: catTitle.trim(),
-                description: catDescription.trim(),
-                gender: catGender,
-                file: catFile,
-            });
+            if (selectedCategoryId !== null) {
+                const updated = await adminUpdateCategory({
+                    id: selectedCategoryId,
+                    title: catTitle.trim(),
+                    description: catDescription.trim(),
+                    gender: catGender,
+                    file: catFile,
+                });
 
-            setCategories((prev) => [...prev, created]);
-            if (styleCategoryId === null) {
-                setStyleCategoryId(created.id);
+                setCategories((prev) =>
+                    prev.map((c) => (c.id === updated.id ? updated : c)),
+                );
+                setSuccess("Категория обновлена");
+                setCatFile(null);
+            } else {
+                const created = await adminCreateCategory({
+                    title: catTitle.trim(),
+                    description: catDescription.trim(),
+                    gender: catGender,
+                    file: catFile,
+                });
+
+                setCategories((prev) => [...prev, created]);
+                if (styleCategoryId === null) {
+                    setStyleCategoryId(created.id);
+                }
+
+                setCatTitle("");
+                setCatDescription("");
+                setCatFile(null);
+                setSuccess("Категория создана");
             }
-
-            setCatTitle("");
-            setCatDescription("");
-            setCatFile(null);
-            setSuccess("Категория создана");
         } catch (e) {
             setError(String(e.message || e));
         } finally {
@@ -992,6 +1192,7 @@ function AdminView() {
             setTimeout(() => setSuccess(""), 2200);
         }
     }
+
 
     async function handleDeleteCategory(id) {
         if (!window.confirm("Удалить категорию и все её стили?")) {
@@ -1007,6 +1208,9 @@ function AdminView() {
             if (styleCategoryId === id) {
                 setStyleCategoryId(null);
             }
+            if (selectedCategoryId === id) {
+                handleResetCategorySelection();
+            }
         } catch (e) {
             setError(String(e.message || e));
         } finally {
@@ -1014,7 +1218,25 @@ function AdminView() {
         }
     }
 
-    async function handleCreateStyle() {
+
+    function handleResetStyleSelection() {
+        setSelectedStyleId(null);
+        setStyleTitle("");
+        setStyleDescription("");
+        setStylePrompt("");
+        setStyleFile(null);
+    }
+
+    function handleSelectStyle(style) {
+        setSelectedStyleId(style.id);
+        setStyleTitle(style.title || "");
+        setStyleDescription(style.description || "");
+        setStylePrompt(style.prompt || "");
+        setStyleCategoryId(style.category_id || null);
+        setStyleFile(null);
+    }
+
+    async function handleSubmitStyle() {
         if (!styleTitle.trim()) {
             setError("Заполни название стиля.");
             return;
@@ -1033,20 +1255,37 @@ function AdminView() {
             setError("");
             setSuccess("");
 
-            const created = await adminCreateStyle({
-                title: styleTitle.trim(),
-                description: styleDescription.trim(),
-                prompt: stylePrompt.trim(),
-                categoryId: styleCategoryId,
-                file: styleFile,
-            });
+            if (selectedStyleId !== null) {
+                const updated = await adminUpdateStyle({
+                    id: selectedStyleId,
+                    title: styleTitle.trim(),
+                    description: styleDescription.trim(),
+                    prompt: stylePrompt.trim(),
+                    categoryId: styleCategoryId,
+                    file: styleFile,
+                });
 
-            setStyles((prev) => [...prev, created]);
-            setStyleTitle("");
-            setStyleDescription("");
-            setStylePrompt("");
-            setStyleFile(null);
-            setSuccess("Стиль создан");
+                setStyles((prev) =>
+                    prev.map((s) => (s.id === updated.id ? updated : s)),
+                );
+                setSuccess("Стиль обновлён");
+                setStyleFile(null);
+            } else {
+                const created = await adminCreateStyle({
+                    title: styleTitle.trim(),
+                    description: styleDescription.trim(),
+                    prompt: stylePrompt.trim(),
+                    categoryId: styleCategoryId,
+                    file: styleFile,
+                });
+
+                setStyles((prev) => [...prev, created]);
+                setStyleTitle("");
+                setStyleDescription("");
+                setStylePrompt("");
+                setStyleFile(null);
+                setSuccess("Стиль создан");
+            }
         } catch (e) {
             setError(String(e.message || e));
         } finally {
@@ -1054,6 +1293,8 @@ function AdminView() {
             setTimeout(() => setSuccess(""), 2200);
         }
     }
+
+
 
 
     async function handleDeleteStyle(id) {
@@ -1066,12 +1307,16 @@ function AdminView() {
             setError("");
             await adminDeleteStyle(id);
             setStyles((prev) => prev.filter((s) => s.id !== id));
+            if (selectedStyleId === id) {
+                handleResetStyleSelection();
+            }
         } catch (e) {
             setError(String(e.message || e));
         } finally {
             setDeletingStyleId(null);
         }
     }
+
 
     function handleStatsPrevPage() {
         if (statsPage <= 0 || loadingStats) {
@@ -1269,10 +1514,13 @@ function AdminView() {
                                         onChangeDescription={setCatDescription}
                                         onChangeGender={setCatGender}
                                         onChangeFile={setCatFile}
-                                        onSubmit={handleCreateCategory}
+                                        onSubmit={handleSubmitCategory}
                                         submitting={submitting}
+                                        isEdit={selectedCategoryId !== null}
+                                        onResetSelection={handleResetCategorySelection}
                                     />
                                 )}
+
 
                                 {mode === "style" && (
                                     <StyleForm
@@ -1287,10 +1535,13 @@ function AdminView() {
                                         onChangePrompt={setStylePrompt}
                                         onChangeCategoryId={setStyleCategoryId}
                                         onChangeFile={setStyleFile}
-                                        onSubmit={handleCreateStyle}
+                                        onSubmit={handleSubmitStyle}
                                         submitting={submitting}
+                                        isEdit={selectedStyleId !== null}
+                                        onResetSelection={handleResetStyleSelection}
                                     />
                                 )}
+
 
                             </section>
 
@@ -1300,8 +1551,11 @@ function AdminView() {
                                     onReload={loadCategories}
                                     onDeleteCategory={handleDeleteCategory}
                                     deletingId={deletingCategoryId}
+                                    selectedCategoryId={selectedCategoryId}
+                                    onSelectCategory={handleSelectCategory}
                                 />
                             )}
+
 
                             {mode === "style" && (
                                 <AdminStylesBlock
@@ -1311,8 +1565,11 @@ function AdminView() {
                                     onDeleteStyle={handleDeleteStyle}
                                     deletingId={deletingStyleId}
                                     hasCategorySelected={hasCategorySelected}
+                                    selectedStyleId={selectedStyleId}
+                                    onSelectStyle={handleSelectStyle}
                                 />
                             )}
+
                         </div>
                     </div>
                 )}

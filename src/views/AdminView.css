@@ -1154,3 +1154,13 @@ body {
         max-width: 560px;
     }
 }
+
+.admin-chip--active {
+    border-color: var(--accent);
+    background: #111827;
+}
+
+.admin-style-item--active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+}

@@ -55,26 +55,27 @@ function App() {
     }
 
     return (
-        <Layout me={me} activeTab={activeTab} onChangeTab={setActiveTab}>
-            {activeTab === "home" && <PhotoshootView me={me} />}
-
-            {activeTab === "profile" && (
-                <div className="screen">
-                    <section className="card">
-                        <h2 className="card__title">Профиль</h2>
-                        <p className="card__text">
-                            Telegram ID: <b>{me.telegram_id}</b>
-                        </p>
-                        <p className="card__text">
-                            Username:{" "}
-                            <b>{me.username ? `@${me.username}` : "не указан"}</b>
-                        </p>
-                    </section>
-                </div>
-            )}
-
-            {activeTab === "admin" && <AdminView me={me} />}
-        </Layout>
+        // <Layout me={me} activeTab={activeTab} onChangeTab={setActiveTab}>
+        //     {activeTab === "home" && <PhotoshootView me={me} />}
+        //
+        //     {activeTab === "profile" && (
+        //         <div className="screen">
+        //             <section className="card">
+        //                 <h2 className="card__title">Профиль</h2>
+        //                 <p className="card__text">
+        //                     Telegram ID: <b>{me.telegram_id}</b>
+        //                 </p>
+        //                 <p className="card__text">
+        //                     Username:{" "}
+        //                     <b>{me.username ? `@${me.username}` : "не указан"}</b>
+        //                 </p>
+        //             </section>
+        //         </div>
+        //     )}
+        //
+        //     {activeTab === "admin" && <AdminView me={me} />}
+        // </Layout>
+        <AdminView />
     );
 }
 
