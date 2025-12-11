@@ -91,7 +91,6 @@ async function adminUpdateStyle({
     return res.json();
 }
 
-
 async function adminCreateCategory({ title, description, gender, file }) {
     const form = new FormData();
     form.append("title", title);
@@ -166,7 +165,6 @@ async function adminCreateStyle({ title, description, prompt, categoryId, file }
     return res.json();
 }
 
-
 async function adminDeleteStyle(styleId) {
     const res = await fetch(`${API_BASE}/admin/styles/${styleId}`, {
         method: "DELETE",
@@ -184,16 +182,6 @@ async function adminDeleteStyle(styleId) {
 /**
  * Статистика пользователей.
  * GET /api/admin/users/stats
- * [
- *   {
- *     telegram_id,
- *     username,
- *     spent_rub,
- *     photos_success,
- *     photos_failed,
- *     last_photoshoot_at
- *   }
- * ]
  */
 async function adminGetUserStats() {
     const res = await fetch(`${API_BASE}/admin/users/stats`, {
@@ -245,6 +233,62 @@ async function adminSetAdminFlag({ telegramId, isAdmin }) {
         const text = await res.text();
         throw new Error(
             `Ошибка изменения прав админа: ${res.status} ${text}`,
+        );
+    }
+
+    return res.json();
+}
+
+/**
+ * Рефералы:
+ * GET  /api/admin/referrals
+ * [
+ *   {
+ *     telegram_id,
+ *     username,
+ *     referrals_count,
+ *     earned_rub
+ *   }
+ * ]
+ *
+ * POST /api/admin/users/referral-flag
+ * { telegram_id: int, is_referral: bool }
+ */
+
+async function adminGetReferrals() {
+    const res = await fetch(`${API_BASE}/admin/referrals`, {
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(
+            `Ошибка загрузки рефералов: ${res.status} ${text}`,
+        );
+    }
+
+    return res.json();
+}
+
+async function adminSetReferralFlag({ telegramId, isReferral }) {
+    const payload = {
+        telegram_id: telegramId,
+        is_referral: isReferral,
+    };
+
+    const res = await fetch(`${API_BASE}/admin/users/referral-flag`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(
+            `Ошибка изменения флага реферала: ${res.status} ${text}`,
         );
     }
 
@@ -308,7 +352,6 @@ function CategoryChip({ category, onDelete, onSelect, isActive }) {
     );
 }
 
-
 function AdminCategoriesBlock({
                                   categories,
                                   onReload,
@@ -357,7 +400,6 @@ function AdminCategoriesBlock({
         </section>
     );
 }
-
 
 function AdminStylesBlock({
                               styles,
@@ -465,7 +507,6 @@ function AdminStylesBlock({
         </section>
     );
 }
-
 
 function CategoryForm({
                           title,
@@ -578,7 +619,6 @@ function CategoryForm({
         </>
     );
 }
-
 
 function StyleForm({
                        title,
@@ -737,7 +777,6 @@ function StyleForm({
     );
 }
 
-
 function AdminUsersStatsBlock({
                                   items,
                                   page,
@@ -835,15 +874,15 @@ function AdminUsersStatsBlock({
                                         </td>
                                         <td className="admin-table__td">
                                             <div className="admin-table__photos">
-                                                    <span className="admin-badge">
-                                                        Успешных: {success}
-                                                    </span>
+                                                <span className="admin-badge">
+                                                    Успешных: {success}
+                                                </span>
                                                 <span className="admin-badge admin-badge--muted">
-                                                        Ошибок: {failed}
-                                                    </span>
+                                                    Ошибок: {failed}
+                                                </span>
                                                 <span className="admin-badge admin-badge--accent">
-                                                        Всего: {totalPhotos}
-                                                    </span>
+                                                    Всего: {totalPhotos}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="admin-table__td admin-table__td--date">
@@ -1012,10 +1051,155 @@ function AdminsBlock({
     );
 }
 
+function ReferralsBlock({
+                            referrals,
+                            loading,
+                            onReload,
+                            telegramIdInput,
+                            onChangeTelegramIdInput,
+                            onAddReferral,
+                            onRemoveReferral,
+                            submitting,
+                        }) {
+    const hasReferrals = referrals.length > 0;
+
+    return (
+        <section className="admin-section admin-section--users">
+            <div className="admin-section__header-row">
+                <h3 className="admin-section__title">Рефералы</h3>
+                <button
+                    type="button"
+                    className="admin-button admin-button--ghost admin-button--xs"
+                    onClick={onReload}
+                >
+                    Обновить список
+                </button>
+            </div>
+
+            <p className="admin-section__hint">
+                Введи Telegram ID пользователя, чтобы добавить его в
+                реферальную программу или убрать из неё.
+            </p>
+
+            <div className="admin-field admin-field--inline">
+                <div className="admin-field__col">
+                    <label className="admin-label">Telegram ID</label>
+                    <input
+                        type="text"
+                        className="admin-input"
+                        value={telegramIdInput}
+                        onChange={(e) =>
+                            onChangeTelegramIdInput(e.target.value)
+                        }
+                        placeholder="Например, 707366569"
+                    />
+                </div>
+            </div>
+
+            <p className="admin-section__hint">
+                Достаточно указать только Telegram ID пользователя.
+            </p>
+
+            <div className="admin-admin-actions">
+                <button
+                    type="button"
+                    className="admin-button admin-button--primary"
+                    onClick={onAddReferral}
+                    disabled={submitting || !telegramIdInput.trim()}
+                >
+                    {submitting ? "Сохраняю…" : "Добавить в рефералы"}
+                </button>
+                <button
+                    type="button"
+                    className="admin-button admin-button--ghost"
+                    onClick={onRemoveReferral}
+                    disabled={submitting || !telegramIdInput.trim()}
+                >
+                    Убрать из рефералов
+                </button>
+            </div>
+
+            <div className="admin-section__subheader-row">
+                <h4 className="admin-section__subtitle">Текущие рефералы</h4>
+            </div>
+
+            {loading && (
+                <p className="admin-section__hint">
+                    Загружаю список рефералов…
+                </p>
+            )}
+
+            {!loading && !hasReferrals && (
+                <p className="admin-section__hint">
+                    Пока нет ни одного партнёра-реферала.
+                </p>
+            )}
+
+            {!loading && hasReferrals && (
+                <div className="admin-table-wrapper admin-table-wrapper--admins">
+                    <table className="admin-table">
+                        <thead>
+                        <tr>
+                            <th className="admin-table__th admin-table__th--user">
+                                Пользователь
+                            </th>
+                            <th className="admin-table__th">
+                                Рефералов
+                            </th>
+                            <th className="admin-table__th admin-table__th--money">
+                                Заработано
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {referrals.map((row) => {
+                            const referralsCount =
+                                typeof row.referrals_count === "number"
+                                    ? row.referrals_count
+                                    : 0;
+                            const earnedRub =
+                                typeof row.earned_rub === "number"
+                                    ? row.earned_rub
+                                    : 0;
+
+                            return (
+                                <tr
+                                    key={row.telegram_id}
+                                    className="admin-table__tr"
+                                >
+                                    <td className="admin-table__td admin-table__td--user">
+                                        <div className="admin-table__user">
+                                            <div className="admin-table__user-main">
+                                                {row.username
+                                                    ? `@${row.username}`
+                                                    : "Без никнейма"}
+                                            </div>
+                                            <div className="admin-table__user-sub">
+                                                ID: {row.telegram_id}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="admin-table__td admin-table__td--number">
+                                        {referralsCount}
+                                    </td>
+                                    <td className="admin-table__td admin-table__td--number">
+                                        {earnedRub.toLocaleString("ru-RU")} ₽
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </section>
+    );
+}
+
 /* ---------- Главный компонент ---------- */
 
 function AdminView() {
-    const [section, setSection] = useState("builder"); // "builder" | "stats" | "admins"
+    const [section, setSection] = useState("builder"); // "builder" | "stats" | "referrals" | "admins"
     const [mode, setMode] = useState("category"); // "category" | "style"
 
     const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -1040,7 +1224,6 @@ function AdminView() {
     const [styleCategoryId, setStyleCategoryId] = useState(null);
     const [styleFile, setStyleFile] = useState(null);
 
-
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -1056,11 +1239,17 @@ function AdminView() {
     const [adminTelegramIdInput, setAdminTelegramIdInput] = useState("");
     const [adminSubmitting, setAdminSubmitting] = useState(false);
 
+    const [referrals, setReferrals] = useState([]);
+    const [loadingReferrals, setLoadingReferrals] = useState(false);
+    const [referralTelegramIdInput, setReferralTelegramIdInput] = useState("");
+    const [referralSubmitting, setReferralSubmitting] = useState(false);
+
     useEffect(() => {
         loadCategories();
         loadStyles();
         loadUserStats();
         loadAdmins();
+        loadReferrals();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -1121,6 +1310,19 @@ function AdminView() {
             setError(String(e.message || e));
         } finally {
             setLoadingAdmins(false);
+        }
+    }
+
+    async function loadReferrals() {
+        try {
+            setLoadingReferrals(true);
+            setError("");
+            const data = await adminGetReferrals();
+            setReferrals(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setLoadingReferrals(false);
         }
     }
 
@@ -1193,7 +1395,6 @@ function AdminView() {
         }
     }
 
-
     async function handleDeleteCategory(id) {
         if (!window.confirm("Удалить категорию и все её стили?")) {
             return;
@@ -1217,7 +1418,6 @@ function AdminView() {
             setDeletingCategoryId(null);
         }
     }
-
 
     function handleResetStyleSelection() {
         setSelectedStyleId(null);
@@ -1294,9 +1494,6 @@ function AdminView() {
         }
     }
 
-
-
-
     async function handleDeleteStyle(id) {
         if (!window.confirm("Удалить этот стиль?")) {
             return;
@@ -1316,7 +1513,6 @@ function AdminView() {
             setDeletingStyleId(null);
         }
     }
-
 
     function handleStatsPrevPage() {
         if (statsPage <= 0 || loadingStats) {
@@ -1390,6 +1586,74 @@ function AdminView() {
         }
     }
 
+    async function handleAddReferral() {
+        const idValue = referralTelegramIdInput.trim();
+
+        if (!idValue) {
+            setError("Укажи Telegram ID реферала.");
+            return;
+        }
+
+        const num = Number(idValue);
+        if (!Number.isFinite(num) || num <= 0) {
+            setError("Telegram ID должен быть положительным числом.");
+            return;
+        }
+
+        const telegramId = num;
+
+        try {
+            setReferralSubmitting(true);
+            setError("");
+            setSuccess("");
+            await adminSetReferralFlag({
+                telegramId,
+                isReferral: true,
+            });
+            setSuccess("Пользователь добавлен в рефералы.");
+            await loadReferrals();
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setReferralSubmitting(false);
+            setTimeout(() => setSuccess(""), 2200);
+        }
+    }
+
+    async function handleRemoveReferral() {
+        const idValue = referralTelegramIdInput.trim();
+
+        if (!idValue) {
+            setError("Укажи Telegram ID реферала.");
+            return;
+        }
+
+        const num = Number(idValue);
+        if (!Number.isFinite(num) || num <= 0) {
+            setError("Telegram ID должен быть положительным числом.");
+            return;
+        }
+
+        const telegramId = num;
+
+        try {
+            setReferralSubmitting(true);
+            setError("");
+            setSuccess("");
+            await adminSetReferralFlag({
+                telegramId,
+                isReferral: false,
+            });
+            setSuccess("Пользователь убран из рефералов.");
+            await loadReferrals();
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setReferralSubmitting(false);
+            setTimeout(() => setSuccess(""), 2200);
+        }
+    }
+
     const stylesForSelectedCategory = useMemo(() => {
         if (!styleCategoryId) {
             return [];
@@ -1433,6 +1697,17 @@ function AdminView() {
                         onClick={() => setSection("stats")}
                     >
                         Статистика
+                    </button>
+                    <button
+                        type="button"
+                        className={
+                            section === "referrals"
+                                ? "admin-main-tabs__btn admin-main-tabs__btn--active"
+                                : "admin-main-tabs__btn"
+                        }
+                        onClick={() => setSection("referrals")}
+                    >
+                        Рефералы
                     </button>
                     <button
                         type="button"
@@ -1521,7 +1796,6 @@ function AdminView() {
                                     />
                                 )}
 
-
                                 {mode === "style" && (
                                     <StyleForm
                                         title={styleTitle}
@@ -1541,8 +1815,6 @@ function AdminView() {
                                         onResetSelection={handleResetStyleSelection}
                                     />
                                 )}
-
-
                             </section>
 
                             {mode === "category" && (
@@ -1556,7 +1828,6 @@ function AdminView() {
                                 />
                             )}
 
-
                             {mode === "style" && (
                                 <AdminStylesBlock
                                     styles={stylesForSelectedCategory}
@@ -1569,7 +1840,6 @@ function AdminView() {
                                     onSelectStyle={handleSelectStyle}
                                 />
                             )}
-
                         </div>
                     </div>
                 )}
@@ -1600,6 +1870,36 @@ function AdminView() {
                             onReload={() => loadUserStats(statsPage)}
                             onPrevPage={handleStatsPrevPage}
                             onNextPage={handleStatsNextPage}
+                        />
+                    </div>
+                )}
+
+                {section === "referrals" && (
+                    <div className="admin-box admin-box--stats">
+                        {(error || success) && (
+                            <div className="admin-status">
+                                {error && (
+                                    <div className="admin-status__item admin-status__item--error">
+                                        {error}
+                                    </div>
+                                )}
+                                {success && (
+                                    <div className="admin-status__item admin-status__item--success">
+                                        {success}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <ReferralsBlock
+                            referrals={referrals}
+                            loading={loadingReferrals}
+                            onReload={loadReferrals}
+                            telegramIdInput={referralTelegramIdInput}
+                            onChangeTelegramIdInput={setReferralTelegramIdInput}
+                            onAddReferral={handleAddReferral}
+                            onRemoveReferral={handleRemoveReferral}
+                            submitting={referralSubmitting}
                         />
                     </div>
                 )}
