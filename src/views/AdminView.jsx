@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "./AdminView.css";
 
-const API_BASE = "http://62.113.42.113:8001/api";
+const API_BASE = "https://api.aiphotostudio.ru/api";
 // const API_BASE = "http://0.0.0.0:8000/api";
 
 /* ---------- API helpers ---------- */
