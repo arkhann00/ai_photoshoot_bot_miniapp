@@ -198,6 +198,27 @@ async function adminGetUserStats() {
     return res.json();
 }
 
+async function adminClearUserStats({ clearLogs = true } = {}) {
+    const res = await fetch(`${API_BASE}/admin/users/stats/clear`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+            confirm: "CLEAR",
+            clear_logs: Boolean(clearLogs),
+        }),
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Ошибка очистки статистики: ${res.status} ${text}`);
+    }
+
+    return res.json();
+}
+
 /**
  * Админы:
  * GET  /api/admin/admins
@@ -1233,6 +1254,7 @@ function AdminView() {
     const [statsPageSize] = useState(20);
     const [statsTotal, setStatsTotal] = useState(0);
     const [loadingStats, setLoadingStats] = useState(false);
+    const [clearingStats, setClearingStats] = useState(false);
 
     const [admins, setAdmins] = useState([]);
     const [loadingAdmins, setLoadingAdmins] = useState(false);
@@ -1323,6 +1345,42 @@ function AdminView() {
             setError(String(e.message || e));
         } finally {
             setLoadingReferrals(false);
+        }
+    }
+
+    async function handleClearStats() {
+        if (clearingStats || loadingStats) {
+            return;
+        }
+
+        const ok1 = window.confirm(
+            "Внимание!\n\nЭто действие необратимо: будет очищена статистика пользователей.\nПродолжить?"
+        );
+        if (!ok1) {
+            return;
+        }
+
+        const phrase = window.prompt('Для подтверждения введи слово: ОЧИСТИТЬ');
+        if (phrase !== "ОЧИСТИТЬ") {
+            setError("Очистка отменена: неверное подтверждение.");
+            return;
+        }
+
+        try {
+            setClearingStats(true);
+            setError("");
+            setSuccess("");
+
+            // true = чистим и агрегаты, и логи фотосессий (см. бэк ниже)
+            await adminClearUserStats({ clearLogs: true });
+
+            setSuccess("Статистика очищена.");
+            await loadUserStats(0);
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setClearingStats(false);
+            setTimeout(() => setSuccess(""), 2200);
         }
     }
 
@@ -1871,6 +1929,20 @@ function AdminView() {
                             onPrevPage={handleStatsPrevPage}
                             onNextPage={handleStatsNextPage}
                         />
+
+                        <AdminUsersStatsBlock
+                            items={statsItems}
+                            page={statsPage}
+                            pageSize={statsPageSize}
+                            total={statsTotal}
+                            loading={loadingStats}
+                            onReload={() => loadUserStats(statsPage)}
+                            onPrevPage={handleStatsPrevPage}
+                            onNextPage={handleStatsNextPage}
+                            onClear={handleClearStats}
+                            clearing={clearingStats}
+                        />
+
                     </div>
                 )}
 
