@@ -797,7 +797,6 @@ function StyleForm({
         </>
     );
 }
-
 function AdminUsersStatsBlock({
                                   items,
                                   page,
@@ -807,6 +806,8 @@ function AdminUsersStatsBlock({
                                   onReload,
                                   onPrevPage,
                                   onNextPage,
+                                  onClear,
+                                  clearing,
                               }) {
     const hasItems = items.length > 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -816,13 +817,28 @@ function AdminUsersStatsBlock({
         <section className="admin-section admin-section--users">
             <div className="admin-section__header-row">
                 <h3 className="admin-section__title">Статистика пользователей</h3>
-                <button
-                    type="button"
-                    className="admin-button admin-button--ghost admin-button--xs"
-                    onClick={onReload}
-                >
-                    Обновить
-                </button>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                        type="button"
+                        className="admin-button admin-button--ghost admin-button--xs"
+                        onClick={onReload}
+                        disabled={loading || clearing}
+                        title="Обновить статистику"
+                    >
+                        Обновить
+                    </button>
+
+                    <button
+                        type="button"
+                        className="admin-button admin-button--ghost admin-button--xs"
+                        onClick={onClear}
+                        disabled={loading || clearing}
+                        title="Очистить статистику (необратимо)"
+                    >
+                        {clearing ? "Очищаю…" : "Очистить"}
+                    </button>
+                </div>
             </div>
 
             {loading && (
@@ -895,21 +911,19 @@ function AdminUsersStatsBlock({
                                         </td>
                                         <td className="admin-table__td">
                                             <div className="admin-table__photos">
-                                                <span className="admin-badge">
-                                                    Успешных: {success}
-                                                </span>
+                                                    <span className="admin-badge">
+                                                        Успешных: {success}
+                                                    </span>
                                                 <span className="admin-badge admin-badge--muted">
-                                                    Ошибок: {failed}
-                                                </span>
+                                                        Ошибок: {failed}
+                                                    </span>
                                                 <span className="admin-badge admin-badge--accent">
-                                                    Всего: {totalPhotos}
-                                                </span>
+                                                        Всего: {totalPhotos}
+                                                    </span>
                                             </div>
                                         </td>
                                         <td className="admin-table__td admin-table__td--date">
-                                            {formatDateTime(
-                                                row.last_photoshoot_at,
-                                            )}
+                                            {formatDateTime(row.last_photoshoot_at)}
                                         </td>
                                     </tr>
                                 );
@@ -927,7 +941,7 @@ function AdminUsersStatsBlock({
                                 type="button"
                                 className="admin-button admin-button--ghost admin-button--xs"
                                 onClick={onPrevPage}
-                                disabled={page <= 0}
+                                disabled={page <= 0 || loading || clearing}
                             >
                                 Назад
                             </button>
@@ -938,7 +952,7 @@ function AdminUsersStatsBlock({
                                 type="button"
                                 className="admin-button admin-button--ghost admin-button--xs"
                                 onClick={onNextPage}
-                                disabled={humanPage >= totalPages}
+                                disabled={humanPage >= totalPages || loading || clearing}
                             >
                                 Вперёд
                             </button>
@@ -1918,17 +1932,6 @@ function AdminView() {
                                 )}
                             </div>
                         )}
-
-                        <AdminUsersStatsBlock
-                            items={statsItems}
-                            page={statsPage}
-                            pageSize={statsPageSize}
-                            total={statsTotal}
-                            loading={loadingStats}
-                            onReload={() => loadUserStats(statsPage)}
-                            onPrevPage={handleStatsPrevPage}
-                            onNextPage={handleStatsNextPage}
-                        />
 
                         <AdminUsersStatsBlock
                             items={statsItems}
