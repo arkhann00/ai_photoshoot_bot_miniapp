@@ -20,7 +20,7 @@ import {
     adminCreatePromoCode,
     adminUpdatePromoCode,
     adminDeletePromoCode,
-} from "./api";
+} from "../api.js";
 
 import {
     CategoryForm,
