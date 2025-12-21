@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDateTime } from "../utils";
+import { formatDateTime } from "../../utils";
 
 export function AdminsBlock({
                                 admins,

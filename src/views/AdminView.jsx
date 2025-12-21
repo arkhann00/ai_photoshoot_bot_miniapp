@@ -34,6 +34,8 @@ import {
 import { AdminUsersStatsBlock } from "./components/StatsBlock";
 import { AdminsBlock } from "./components/AdminsBlock";
 import { ReferralsBlock } from "./components/ReferralsBlock";
+import { PromoCodesBlock } from "./components/PromoCodesBlock.jsx";
+import { PromoCodeForm } from "./components/PromoCodeForm.jsx";
 
 /* ---------- Главный компонент ---------- */
 
