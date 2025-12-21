@@ -700,17 +700,7 @@ function AdminView() {
                         onClick={() => setSection("promocodes")}
                     >
                         Промокоды
-                    </button><button
-                    type="button"
-                    className={
-                        section === "promocodes"
-                            ? "admin-main-tabs__btn admin-main-tabs__btn--active"
-                            : "admin-main-tabs__btn"
-                    }
-                    onClick={() => setSection("promocodes")}
-                >
-                    Промокоды
-                </button>
+                    </button>
 
                 </div>
 
