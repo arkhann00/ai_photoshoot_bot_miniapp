@@ -928,7 +928,7 @@ function AdminView() {
                                     onChangeIsActive={setPromoIsActive}
                                     onSubmit={handleSubmitPromoCode}
                                     submitting={promoSubmitting}
-                                    // isEdit={Boolean(selectedPromoCode)}
+                                    isEdit={Boolean(selectedPromoId)}
                                     onResetSelection={resetPromoSelection}
                                 />
                             </section>
