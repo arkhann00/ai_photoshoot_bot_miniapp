@@ -333,6 +333,480 @@ function formatDateTime(value) {
 
 /* ---------- UI блоки ---------- */
 
+import React, { useEffect, useMemo, useState } from "react";
+
+/* ---------- API helpers (promo codes) ---------- */
+
+async function adminGetPromoCodes(apiBase) {
+    const res = await fetch(`${apiBase}/admin/promo-codes`, {
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Ошибка загрузки промокодов: ${res.status} ${text}`);
+    }
+
+    return res.json();
+}
+
+async function adminCreatePromoCode(apiBase, { code, generations, isActive }) {
+    const res = await fetch(`${apiBase}/admin/promo-codes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+            code,
+            generations: Number(generations),
+            is_active: Boolean(isActive),
+        }),
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Ошибка создания промокода: ${res.status} ${text}`);
+    }
+
+    return res.json();
+}
+
+async function adminUpdatePromoCode(apiBase, { id, code, generations, isActive }) {
+    const payload = {};
+    if (code !== undefined && code !== null) payload.code = String(code);
+    if (generations !== undefined && generations !== null) payload.generations = Number(generations);
+    if (isActive !== undefined && isActive !== null) payload.is_active = Boolean(isActive);
+
+    const res = await fetch(`${apiBase}/admin/promo-codes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Ошибка обновления промокода: ${res.status} ${text}`);
+    }
+
+    return res.json();
+}
+
+async function adminDeletePromoCode(apiBase, id) {
+    const res = await fetch(`${apiBase}/admin/promo-codes/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Ошибка удаления промокода: ${res.status} ${text}`);
+    }
+
+    return res.json();
+}
+
+/* ---------- UI ---------- */
+
+function PromoCodeForm({
+                           isEdit,
+                           code,
+                           generations,
+                           isActive,
+                           onChangeCode,
+                           onChangeGenerations,
+                           onChangeIsActive,
+                           onSubmit,
+                           submitting,
+                           onResetSelection,
+                       }) {
+    const heading = isEdit ? "Редактирование промокода" : "Новый промокод";
+
+    const buttonLabel = submitting
+        ? isEdit
+            ? "Сохраняем…"
+            : "Создаём…"
+        : isEdit
+            ? "Сохранить изменения"
+            : "Создать промокод";
+
+    return (
+        <>
+            <h2 className="admin-box__title">{heading}</h2>
+            <p className="admin-box__hint">
+                Промокод даёт пользователю дополнительные генерации (credits).
+            </p>
+
+            <div className="admin-field">
+                <label className="admin-label">Код</label>
+                <input
+                    type="text"
+                    className="admin-input"
+                    value={code}
+                    onChange={(e) => onChangeCode(e.target.value)}
+                    placeholder="Например: NEWYEAR2026"
+                    disabled={submitting}
+                />
+                <p className="admin-hint">Код будет нормализован: пробелы уберутся, регистр → верхний.</p>
+            </div>
+
+            <div className="admin-field">
+                <label className="admin-label">Сколько генераций даёт</label>
+                <input
+                    type="number"
+                    className="admin-input"
+                    value={generations}
+                    min={1}
+                    step={1}
+                    onChange={(e) => onChangeGenerations(e.target.value)}
+                    placeholder="Например: 3"
+                    disabled={submitting}
+                />
+            </div>
+
+            <div className="admin-field">
+                <label className="admin-label">Активность</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input
+                        type="checkbox"
+                        checked={Boolean(isActive)}
+                        onChange={(e) => onChangeIsActive(e.target.checked)}
+                        disabled={submitting}
+                    />
+                    <span>{isActive ? "Активен" : "Выключен"}</span>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                className="admin-button admin-button--primary admin-button--full"
+                onClick={onSubmit}
+                disabled={submitting}
+            >
+                {buttonLabel}
+            </button>
+
+            {isEdit && (
+                <button
+                    type="button"
+                    className="admin-button admin-button--ghost admin-button--full"
+                    onClick={onResetSelection}
+                    disabled={submitting}
+                >
+                    Сбросить выбор
+                </button>
+            )}
+        </>
+    );
+}
+
+function PromoCodesList({
+                            promoCodes,
+                            loading,
+                            deletingId,
+                            selectedId,
+                            onReload,
+                            onSelect,
+                            onDelete,
+                            onToggleActive,
+                        }) {
+    const hasItems = promoCodes.length > 0;
+
+    return (
+        <section className="admin-section admin-section--users">
+            <div className="admin-section__header-row">
+                <h3 className="admin-section__title">Промокоды</h3>
+                <button
+                    type="button"
+                    className="admin-button admin-button--ghost admin-button--xs"
+                    onClick={onReload}
+                    disabled={loading}
+                >
+                    Обновить
+                </button>
+            </div>
+
+            {loading && <p className="admin-section__hint">Загружаю промокоды…</p>}
+
+            {!loading && !hasItems && (
+                <p className="admin-section__hint">Промокодов пока нет. Создай первый слева.</p>
+            )}
+
+            {!loading && hasItems && (
+                <div className="admin-table-wrapper admin-table-wrapper--admins">
+                    <table className="admin-table">
+                        <thead>
+                        <tr>
+                            <th className="admin-table__th admin-table__th--user">Код</th>
+                            <th className="admin-table__th">Генераций</th>
+                            <th className="admin-table__th">Активен</th>
+                            <th className="admin-table__th">Действия</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {promoCodes.map((p) => {
+                            const isRowActive = selectedId === p.id;
+                            const trClass = isRowActive ? "admin-table__tr admin-style-item--active" : "admin-table__tr";
+
+                            return (
+                                <tr
+                                    key={p.id}
+                                    className={trClass}
+                                    style={{ cursor: "pointer" }}
+                                    onClick={() => onSelect(p)}
+                                >
+                                    <td className="admin-table__td admin-table__td--user">
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                            <div style={{ fontWeight: 900, letterSpacing: 0.4 }}>
+                                                {p.code}
+                                            </div>
+                                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                                <span className="admin-badge">#{p.id}</span>
+                                                {!p.is_active && (
+                                                    <span className="admin-badge admin-badge--muted">Выключен</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td className="admin-table__td admin-table__td--number">
+                                        {Number(p.generations || 0)}
+                                    </td>
+
+                                    <td className="admin-table__td">
+                                        <input
+                                            type="checkbox"
+                                            checked={Boolean(p.is_active)}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                onToggleActive(p, e.target.checked);
+                                            }}
+                                            disabled={loading || deletingId === p.id}
+                                            title="Вкл/выкл промокод"
+                                        />
+                                    </td>
+
+                                    <td className="admin-table__td">
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <button
+                                                type="button"
+                                                className="admin-button admin-button--ghost admin-button--xs"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onSelect(p);
+                                                }}
+                                                disabled={loading}
+                                            >
+                                                Редактировать
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="admin-button admin-button--ghost admin-button--xs"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onDelete(p.id);
+                                                }}
+                                                disabled={loading || deletingId === p.id}
+                                                title="Удалить промокод"
+                                            >
+                                                {deletingId === p.id ? "Удаляем…" : "Удалить"}
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </section>
+    );
+}
+
+export default function PromoCodesTab({ apiBase }) {
+    const [promoCodes, setPromoCodes] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
+
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    const [selectedId, setSelectedId] = useState(null);
+    const [code, setCode] = useState("");
+    const [generations, setGenerations] = useState("1");
+    const [isActive, setIsActive] = useState(true);
+
+    const isEdit = selectedId !== null;
+
+    const sortedPromoCodes = useMemo(() => {
+        const arr = Array.isArray(promoCodes) ? [...promoCodes] : [];
+        arr.sort((a, b) => {
+            // активные сверху, затем по id desc
+            const aa = Boolean(a.is_active);
+            const bb = Boolean(b.is_active);
+            if (aa !== bb) return aa ? -1 : 1;
+            return Number(b.id) - Number(a.id);
+        });
+        return arr;
+    }, [promoCodes]);
+
+    useEffect(() => {
+        loadPromoCodes();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    async function loadPromoCodes() {
+        try {
+            setLoading(true);
+            setError("");
+            const data = await adminGetPromoCodes(apiBase);
+            setPromoCodes(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function resetSelection() {
+        setSelectedId(null);
+        setCode("");
+        setGenerations("1");
+        setIsActive(true);
+    }
+
+    function handleSelect(p) {
+        setSelectedId(p.id);
+        setCode(p.code || "");
+        setGenerations(String(p.generations ?? 1));
+        setIsActive(Boolean(p.is_active));
+    }
+
+    async function handleSubmit() {
+        const trimmed = String(code || "").trim();
+        const gens = Number(generations);
+
+        if (!trimmed) {
+            setError("Заполни код промокода.");
+            return;
+        }
+        if (!Number.isFinite(gens) || gens <= 0) {
+            setError("Количество генераций должно быть числом > 0.");
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            setError("");
+            setSuccess("");
+
+            if (isEdit) {
+                const updated = await adminUpdatePromoCode(apiBase, {
+                    id: selectedId,
+                    code: trimmed,
+                    generations: gens,
+                    isActive,
+                });
+
+                setPromoCodes((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                setSuccess("Промокод обновлён.");
+            } else {
+                const created = await adminCreatePromoCode(apiBase, {
+                    code: trimmed,
+                    generations: gens,
+                    isActive,
+                });
+
+                setPromoCodes((prev) => [created, ...prev]);
+                setSuccess("Промокод создан.");
+                resetSelection();
+            }
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setSubmitting(false);
+            setTimeout(() => setSuccess(""), 2200);
+        }
+    }
+
+    async function handleDelete(id) {
+        if (!window.confirm("Удалить промокод? Это действие необратимо.")) return;
+
+        try {
+            setDeletingId(id);
+            setError("");
+            setSuccess("");
+            await adminDeletePromoCode(apiBase, id);
+            setPromoCodes((prev) => prev.filter((x) => x.id !== id));
+            if (selectedId === id) resetSelection();
+            setSuccess("Промокод удалён.");
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setDeletingId(null);
+            setTimeout(() => setSuccess(""), 2200);
+        }
+    }
+
+    async function handleToggleActive(p, nextActive) {
+        try {
+            setError("");
+            const updated = await adminUpdatePromoCode(apiBase, {
+                id: p.id,
+                isActive: Boolean(nextActive),
+            });
+            setPromoCodes((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+
+            // если редактируем этот же — синхронизируем чекбокс формы
+            if (selectedId === updated.id) {
+                setIsActive(Boolean(updated.is_active));
+            }
+        } catch (e) {
+            setError(String(e.message || e));
+        }
+    }
+
+    return (
+        <div className="admin-box admin-box--stats">
+            {(error || success) && (
+                <div className="admin-status">
+                    {error && <div className="admin-status__item admin-status__item--error">{error}</div>}
+                    {success && <div className="admin-status__item admin-status__item--success">{success}</div>}
+                </div>
+            )}
+
+            <div className="admin-forms">
+                <section className="admin-section">
+                    <PromoCodeForm
+                        isEdit={isEdit}
+                        code={code}
+                        generations={generations}
+                        isActive={isActive}
+                        onChangeCode={setCode}
+                        onChangeGenerations={setGenerations}
+                        onChangeIsActive={setIsActive}
+                        onSubmit={handleSubmit}
+                        submitting={submitting}
+                        onResetSelection={resetSelection}
+                    />
+                </section>
+
+                <PromoCodesList
+                    promoCodes={sortedPromoCodes}
+                    loading={loading}
+                    deletingId={deletingId}
+                    selectedId={selectedId}
+                    onReload={loadPromoCodes}
+                    onSelect={handleSelect}
+                    onDelete={handleDelete}
+                    onToggleActive={handleToggleActive}
+                />
+            </div>
+        </div>
+    );
+}
+
 function CategoryChip({ category, onDelete, onSelect, isActive }) {
   const labelGender = category.gender === "female" ? "Ж" : "М";
 
@@ -1768,6 +2242,17 @@ function AdminView() {
           >
             Админы
           </button>
+            <button
+                type="button"
+                className={
+                    section === "promocodes"
+                        ? "admin-main-tabs__btn admin-main-tabs__btn--active"
+                        : "admin-main-tabs__btn"
+                }
+                onClick={() => setSection("promocodes")}
+            >
+                Промокоды
+            </button>
         </div>
 
         {section === "builder" && (
@@ -1969,6 +2454,8 @@ function AdminView() {
                 )}
               </div>
             )}
+
+              {section === "promocodes" && <PromoCodesTab apiBase={API_BASE} />}
 
             <AdminsBlock
               admins={admins}
