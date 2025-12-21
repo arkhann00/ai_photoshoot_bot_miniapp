@@ -481,79 +481,48 @@ export async function adminSetReferralFlag({ telegramId, isReferral }) {
  * PUT    /api/admin/promo-codes/{code}         { generations, is_active }
  * DELETE /api/admin/promo-codes/{code}
  */
+// --- ПРОМОКОДЫ ---
 
 export async function adminGetPromoCodes() {
-    const res = await fetch(`${API_BASE}/admin/promo-codes`, {
-        credentials: "include",
-    });
-
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Ошибка загрузки промокодов: ${res.status} ${text}`);
-    }
-
+    const res = await apiFetch("/admin/promo-codes", { method: "GET" });
     return res.json();
 }
 
 export async function adminCreatePromoCode({ code, generations, isActive }) {
     const payload = {
-        code,
-        generations,
+        code: String(code || "").trim(),
+        generations: Number(generations),
         is_active: Boolean(isActive),
     };
 
-    const res = await fetch(`${API_BASE}/admin/promo-codes`, {
+    const res = await apiFetch("/admin/promo-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
     });
 
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Ошибка создания промокода: ${res.status} ${text}`);
-    }
+    return res.json();
+}
+
+// ✅ вместо PUT: используем реальный эндпоинт бэка
+export async function adminSetPromoCodeActive({ promoId, isActive }) {
+    const payload = { is_active: Boolean(isActive) };
+
+    const res = await apiFetch(`/admin/promo-codes/${promoId}/active`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
 
     return res.json();
 }
 
-export async function adminUpdatePromoCode({ code, generations, isActive }) {
-    const payload = {
-        generations,
-        is_active: Boolean(isActive),
-    };
+// ✅ delete по promo_id (int), а не по code (string)
+export async function adminDeletePromoCode({ promoId }) {
+    const res = await apiFetch(`/admin/promo-codes/${promoId}`, {
+        method: "DELETE",
+    });
 
-    const res = await fetch(
-        `${API_BASE}/admin/promo-codes/${encodeURIComponent(code)}`,
-        {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(payload),
-        }
-    );
-
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Ошибка обновления промокода: ${res.status} ${text}`);
-    }
-
-    return res.json();
-}
-
-export async function adminDeletePromoCode({ code }) {
-    const res = await fetch(
-        `${API_BASE}/admin/promo-codes/${encodeURIComponent(code)}`,
-        {
-            method: "DELETE",
-            credentials: "include",
-        }
-    );
-
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Ошибка удаления промокода: ${res.status} ${text}`);
-    }
-
+    // бэк возвращает JSONResponse({"status":"ok"}), поэтому:
     return res.json();
 }

@@ -5,7 +5,7 @@ export function PromoCodesBlock({
                                     loading,
                                     onReload,
                                     onDeletePromoCode,
-                                    deletingCode,
+                                    deletingId,
                                     selectedCode,
                                     onSelectPromoCode,
                                     formatDateTime,
@@ -52,15 +52,15 @@ export function PromoCodesBlock({
                             const generations =
                                 typeof p.generations === "number" ? p.generations : Number(p.generations || 0);
                             const isActive = Boolean(p.is_active);
-
+                            const promoId = Number(p.id);
                             const isSelected = selectedCode === code;
 
                             return (
                                 <tr
-                                    key={code}
+                                    key={promoId}
                                     className="admin-table__tr"
                                     onClick={() => onSelectPromoCode(p)}
-                                    style={{ cursor: "pointer", opacity: deletingCode === code ? 0.6 : 1 }}
+                                    style={{ cursor: "pointer", opacity: deletingId === promoId ? 0.6 : 1 }}
                                 >
                                     <td className="admin-table__td">
                       <span className={isSelected ? "admin-badge admin-badge--accent" : "admin-badge"}>
@@ -88,11 +88,11 @@ export function PromoCodesBlock({
                                         <button
                                             type="button"
                                             className="admin-button admin-button--ghost admin-button--xs"
-                                            onClick={() => onDeletePromoCode(code)}
-                                            disabled={deletingCode === code}
+                                            onClick={() => onDeletePromoCode(promoId)}     // ✅ id
+                                            disabled={deletingId === promoId}
                                             title="Удалить промокод"
                                         >
-                                            {deletingCode === code ? "…" : "Удалить"}
+                                            {deletingId === promoId ? "…" : "Удалить"}
                                         </button>
                                     </td>
                                 </tr>

@@ -18,8 +18,9 @@ import {
     adminSetReferralFlag,
     adminGetPromoCodes,
     adminCreatePromoCode,
-    adminUpdatePromoCode,
     adminDeletePromoCode,
+    adminSetPromoCodeActive,
+
 } from "../api.js";
 
 import { formatDateTime } from "../utils.js"
@@ -90,9 +91,9 @@ function AdminView() {
     const [promoCodes, setPromoCodes] = useState([]);
     const [loadingPromoCodes, setLoadingPromoCodes] = useState(false);
     const [promoSubmitting, setPromoSubmitting] = useState(false);
-    const [deletingPromoCode, setDeletingPromoCode] = useState(null);
+    const [deletingPromoId, setDeletingPromoId] = useState(null);
 
-    const [selectedPromoCode, setSelectedPromoCode] = useState(null); // code
+    const [selectedPromoId, setSelectedPromoId] = useState(null); // ✅ int id
     const [promoCodeValue, setPromoCodeValue] = useState("");
     const [promoGenerations, setPromoGenerations] = useState(1);
     const [promoIsActive, setPromoIsActive] = useState(true);
@@ -144,17 +145,7 @@ function AdminView() {
             setLoadingPromoCodes(true);
             setError("");
             const data = await adminGetPromoCodes();
-            const arr = Array.isArray(data) ? data : [];
-            // сортируем удобнее: активные сверху, дальше по дате/коду
-            arr.sort((a, b) => {
-                const aa = Boolean(a.is_active);
-                const bb = Boolean(b.is_active);
-                if (aa !== bb) return aa ? -1 : 1;
-                const ca = String(a.code || "");
-                const cb = String(b.code || "");
-                return ca.localeCompare(cb);
-            });
-            setPromoCodes(arr);
+            setPromoCodes(Array.isArray(data) ? data : []);
         } catch (e) {
             setError(String(e.message || e));
         } finally {
@@ -163,74 +154,73 @@ function AdminView() {
     }
 
     function resetPromoSelection() {
-        setSelectedPromoCode(null);
+        setSelectedPromoId(null);
         setPromoCodeValue("");
         setPromoGenerations(1);
         setPromoIsActive(true);
     }
 
     function selectPromo(p) {
-        const code = String(p.code || "");
-        setSelectedPromoCode(code);
-        setPromoCodeValue(code);
-        setPromoGenerations(
-            typeof p.generations === "number" ? p.generations : Number(p.generations || 1)
-        );
+        setSelectedPromoId(Number(p.id));
+        setPromoCodeValue(String(p.code || ""));
+        setPromoGenerations(Number(p.generations || 1));
         setPromoIsActive(Boolean(p.is_active));
     }
 
     async function handleSubmitPromoCode() {
-        const normalizedCode = String(promoCodeValue || "").trim().toUpperCase();
+        const code = String(promoCodeValue || "").trim();
         const gens = Number(promoGenerations);
 
-        if (!normalizedCode) {
-            setError("Укажи код промокода.");
-            return;
-        }
-        if (!Number.isFinite(gens) || gens <= 0) {
-            setError("generations должен быть числом > 0.");
+        if (!selectedPromoId) {
+            // CREATE
+            if (!code) {
+                setError("Укажи код промокода.");
+                return;
+            }
+            if (!Number.isFinite(gens) || gens <= 0) {
+                setError("Генераций должно быть > 0.");
+                return;
+            }
+
+            try {
+                setPromoSubmitting(true);
+                setError("");
+                setSuccess("");
+
+                const created = await adminCreatePromoCode({
+                    code,
+                    generations: gens,
+                    isActive: promoIsActive,
+                });
+
+                setPromoCodes((prev) => [created, ...prev]);
+                setSuccess("Промокод создан");
+                resetPromoSelection();
+            } catch (e) {
+                setError(String(e.message || e));
+            } finally {
+                setPromoSubmitting(false);
+                setTimeout(() => setSuccess(""), 2200);
+            }
             return;
         }
 
+        // EDIT: бэк умеет только active toggle
         try {
             setPromoSubmitting(true);
             setError("");
             setSuccess("");
 
-            if (selectedPromoCode) {
-                const updated = await adminUpdatePromoCode({
-                    code: selectedPromoCode,
-                    generations: gens,
-                    isActive: promoIsActive,
-                });
+            const updated = await adminSetPromoCodeActive({
+                promoId: selectedPromoId,
+                isActive: promoIsActive,
+            });
 
-                setPromoCodes((prev) =>
-                    prev.map((p) => (String(p.code) === String(updated.code) ? updated : p))
-                );
-                setSuccess("Промокод обновлён");
-            } else {
-                const created = await adminCreatePromoCode({
-                    code: normalizedCode,
-                    generations: gens,
-                    isActive: promoIsActive,
-                });
+            setPromoCodes((prev) =>
+                prev.map((p) => (Number(p.id) === Number(updated.id) ? updated : p))
+            );
 
-                setPromoCodes((prev) => {
-                    const next = [...prev, created];
-                    next.sort((a, b) => {
-                        const aa = Boolean(a.is_active);
-                        const bb = Boolean(b.is_active);
-                        if (aa !== bb) return aa ? -1 : 1;
-                        const ca = String(a.code || "");
-                        const cb = String(b.code || "");
-                        return ca.localeCompare(cb);
-                    });
-                    return next;
-                });
-
-                setSuccess("Промокод создан");
-                resetPromoSelection();
-            }
+            setSuccess("Статус промокода обновлён");
         } catch (e) {
             setError(String(e.message || e));
         } finally {
@@ -239,28 +229,24 @@ function AdminView() {
         }
     }
 
-    async function handleDeletePromoCode(code) {
-        const c = String(code || "").trim().toUpperCase();
-        if (!c) return;
+    async function handleDeletePromoCode(promoId) {
+        const id = Number(promoId);
+        if (!Number.isFinite(id) || id <= 0) return;
 
-        if (!window.confirm(`Удалить промокод ${c}?`)) {
-            return;
-        }
+        if (!window.confirm("Удалить промокод?")) return;
 
         try {
-            setDeletingPromoCode(c);
+            setDeletingPromoId(id);
             setError("");
-            await adminDeletePromoCode({ code: c });
 
-            setPromoCodes((prev) => prev.filter((p) => String(p.code) !== c));
+            await adminDeletePromoCode({ promoId: id });
 
-            if (selectedPromoCode === c) {
-                resetPromoSelection();
-            }
+            setPromoCodes((prev) => prev.filter((p) => Number(p.id) !== id));
+            if (selectedPromoId === id) resetPromoSelection();
         } catch (e) {
             setError(String(e.message || e));
         } finally {
-            setDeletingPromoCode(null);
+            setDeletingPromoId(null);
         }
     }
 
@@ -952,7 +938,7 @@ function AdminView() {
                                     onChangeIsActive={setPromoIsActive}
                                     onSubmit={handleSubmitPromoCode}
                                     submitting={promoSubmitting}
-                                    isEdit={Boolean(selectedPromoCode)}
+                                    // isEdit={Boolean(selectedPromoCode)}
                                     onResetSelection={resetPromoSelection}
                                 />
                             </section>
@@ -962,8 +948,8 @@ function AdminView() {
                                 loading={loadingPromoCodes}
                                 onReload={loadPromoCodes}
                                 onDeletePromoCode={handleDeletePromoCode}
-                                deletingCode={deletingPromoCode}
-                                selectedCode={selectedPromoCode}
+                                deletingId={deletingPromoId}
+                                selectedId={selectedPromoId}
                                 onSelectPromoCode={selectPromo}
                                 formatDateTime={formatDateTime}
                             />

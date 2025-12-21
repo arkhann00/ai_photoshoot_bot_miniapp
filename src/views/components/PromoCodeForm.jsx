@@ -55,7 +55,14 @@ export function PromoCodeForm({
                     value={generations}
                     onChange={(e) => onChangeGenerations(Number(e.target.value))}
                     placeholder="Например, 3"
+                    disabled={isEdit}   // ✅ добавь
                 />
+                {isEdit && (
+                    <p className="admin-hint">
+                        Сейчас бэкенд не поддерживает изменение числа генераций у существующего промокода.
+                        Можно только включать/выключать или удалить и создать заново.
+                    </p>
+                )}
             </div>
 
             <div className="admin-field">
