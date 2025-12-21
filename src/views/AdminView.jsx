@@ -333,8 +333,6 @@ function formatDateTime(value) {
 
 /* ---------- UI блоки ---------- */
 
-import React, { useEffect, useMemo, useState } from "react";
-
 /* ---------- API helpers (promo codes) ---------- */
 
 async function adminGetPromoCodes(apiBase) {
@@ -2474,4 +2472,3 @@ function AdminView() {
   );
 }
 
-export default AdminView;
