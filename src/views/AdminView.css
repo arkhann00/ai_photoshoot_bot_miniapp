@@ -15,7 +15,12 @@ body,
     padding: 0;
     height: 100%;
 }
-
+.admin-table__th--actions,
+.admin-table__td--actions {
+  width: 160px;
+  white-space: nowrap;
+  text-align: right;
+}
 :root {
     /* Цвета */
     --bg-page: #020617;          /* общий фон */
