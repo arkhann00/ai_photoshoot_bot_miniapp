@@ -37,6 +37,7 @@ import { AdminsBlock } from "./components/AdminsBlock";
 import { ReferralsBlock } from "./components/ReferralsBlock";
 import { PromoCodesBlock } from "./components/PromoCodesBlock.jsx";
 import { PromoCodeForm } from "./components/PromoCodeForm.jsx";
+import { UsersAllBlock } from "./components/UsersAllBlock";
 
 /* ---------- Главный компонент ---------- */
 
@@ -98,6 +99,11 @@ function AdminView() {
     const [promoGenerations, setPromoGenerations] = useState(1);
     const [promoIsActive, setPromoIsActive] = useState(true);
 
+    const [allUsers, setAllUsers] = useState([]);
+    const [loadingAllUsers, setLoadingAllUsers] = useState(false);
+    const [usersQuery, setUsersQuery] = useState("");
+    const [clearingBalanceTelegramId, setClearingBalanceTelegramId] = useState(null);
+
     useEffect(() => {
         loadCategories();
         loadStyles();
@@ -108,7 +114,56 @@ function AdminView() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        loadCategories();
+        loadStyles();
+        loadUserStats();
+        loadAdmins();
+        loadReferrals();
+        loadPromoCodes();
+        loadAllUsers(); // ✅
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
+    async function loadAllUsers() {
+        try {
+            setLoadingAllUsers(true);
+            setError("");
+            const data = await adminGetAllUsers();
+            setAllUsers(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setLoadingAllUsers(false);
+        }
+        }
+
+        async function handleClearUserBalance(userRow) {
+        const telegramId = Number(userRow?.telegram_id);
+        if (!Number.isFinite(telegramId) || telegramId <= 0) return;
+
+        const label = userRow?.username ? `@${userRow.username}` : `ID ${telegramId}`;
+        if (!window.confirm(`Сбросить баланс пользователю ${label}?`)) return;
+
+        try {
+            setClearingBalanceTelegramId(telegramId);
+            setError("");
+            setSuccess("");
+
+            const updated = await adminClearUserBalance({ telegramId });
+
+            setAllUsers((prev) =>
+            prev.map((u) => (Number(u.telegram_id) === telegramId ? { ...u, ...updated } : u))
+            );
+
+            setSuccess("Баланс сброшен.");
+        } catch (e) {
+            setError(String(e.message || e));
+        } finally {
+            setClearingBalanceTelegramId(null);
+            setTimeout(() => setSuccess(""), 2200);
+        }
+    }
 
     async function loadCategories() {
         try {
@@ -669,6 +724,17 @@ function AdminView() {
                     <button
                         type="button"
                         className={
+                            section === "users"
+                            ? "admin-main-tabs__btn admin-main-tabs__btn--active"
+                            : "admin-main-tabs__btn"
+                        }
+                        onClick={() => setSection("users")}
+                        >
+                        Пользователи
+                </button>
+                    <button
+                        type="button"
+                        className={
                             section === "referrals"
                                 ? "admin-main-tabs__btn admin-main-tabs__btn--active"
                                 : "admin-main-tabs__btn"
@@ -815,6 +881,28 @@ function AdminView() {
                         </div>
                     </div>
                 )}
+
+                {section === "users" && (
+  <div className="admin-box admin-box--stats">
+    {(error || success) && (
+      <div className="admin-status">
+        {error && <div className="admin-status__item admin-status__item--error">{error}</div>}
+        {success && <div className="admin-status__item admin-status__item--success">{success}</div>}
+      </div>
+    )}
+
+    <UsersAllBlock
+      users={allUsers}
+      loading={loadingAllUsers}
+      onReload={loadAllUsers}
+      query={usersQuery}
+      onChangeQuery={setUsersQuery}
+      onClearBalance={handleClearUserBalance}
+      clearingTelegramId={clearingBalanceTelegramId}
+      formatDateTime={formatDateTime}
+    />
+  </div>
+)}
 
                 {section === "stats" && (
                     <div className="admin-box admin-box--stats">

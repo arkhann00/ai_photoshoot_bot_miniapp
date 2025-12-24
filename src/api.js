@@ -526,3 +526,32 @@ export async function adminDeletePromoCode({ promoId }) {
     // бэк возвращает JSONResponse({"status":"ok"}), поэтому:
     return res.json();
 }
+
+// ---------- АДМИН: все пользователи + сброс баланса ----------
+
+export async function adminGetAllUsers() {
+  const res = await fetch(`${API_BASE}/admin/users/all`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Ошибка загрузки пользователей: ${res.status} ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function adminClearUserBalance({ telegramId }) {
+  const res = await fetch(`${API_BASE}/admin/users/${telegramId}/balance/clear`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Ошибка сброса баланса: ${res.status} ${text}`);
+  }
+
+  return res.json(); // AdminUserResponse
+}
