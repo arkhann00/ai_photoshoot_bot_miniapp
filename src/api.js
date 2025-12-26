@@ -555,3 +555,20 @@ export async function adminClearUserBalance({ telegramId }) {
 
   return res.json(); // AdminUserResponse
 }
+
+export async function adminSearchUsers({ q, limit = 50 }) {
+  const url = new URL(`${API_BASE}/admin/users/search`);
+  url.searchParams.set("q", q);
+  url.searchParams.set("limit", String(limit));
+
+  const res = await fetch(url.toString(), {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Ошибка поиска пользователей: ${res.status} ${text}`);
+  }
+
+  return res.json(); // AdminUserResponse[]
+}

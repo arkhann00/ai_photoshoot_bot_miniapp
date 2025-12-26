@@ -21,7 +21,8 @@ import {
     adminDeletePromoCode,
     adminSetPromoCodeActive,
     adminGetAllUsers,
-    adminClearUserBalance
+    adminClearUserBalance,
+    adminSearchUsers
 
 } from "../api.js";
 
@@ -107,65 +108,42 @@ function AdminView() {
     const [clearingBalanceTelegramId, setClearingBalanceTelegramId] = useState(null);
 
     useEffect(() => {
-        loadCategories();
-        loadStyles();
-        loadUserStats();
-        loadAdmins();
-        loadReferrals();
-        loadPromoCodes();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+  loadCategories();
+  loadStyles();
+  loadUserStats();
+  loadAdmins();
+  loadReferrals();
+  loadPromoCodes();
+  loadAllUsers("");
+}, []);
 
     useEffect(() => {
-        loadCategories();
-        loadStyles();
-        loadUserStats();
-        loadAdmins();
-        loadReferrals();
-        loadPromoCodes();
-        loadAllUsers(); // ✅
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+  const t = setTimeout(() => {
+    loadAllUsers(usersQuery);
+  }, 250);
 
-    async function loadAllUsers() {
-        try {
-            setLoadingAllUsers(true);
-            setError("");
-            const data = await adminGetAllUsers();
-            setAllUsers(Array.isArray(data) ? data : []);
-        } catch (e) {
-            setError(String(e.message || e));
-        } finally {
-            setLoadingAllUsers(false);
-        }
-        }
+  return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [usersQuery]);
 
-        async function handleClearUserBalance(userRow) {
-        const telegramId = Number(userRow?.telegram_id);
-        if (!Number.isFinite(telegramId) || telegramId <= 0) return;
+    async function loadAllUsers(qOverride) {
+  const q = String(qOverride ?? usersQuery ?? "").trim();
 
-        const label = userRow?.username ? `@${userRow.username}` : `ID ${telegramId}`;
-        if (!window.confirm(`Сбросить баланс пользователю ${label}?`)) return;
+  try {
+    setLoadingAllUsers(true);
+    setError("");
 
-        try {
-            setClearingBalanceTelegramId(telegramId);
-            setError("");
-            setSuccess("");
+    const data = q
+      ? await adminSearchUsers({ q, limit: 50 })
+      : await adminGetAllUsers();
 
-            const updated = await adminClearUserBalance({ telegramId });
-
-            setAllUsers((prev) =>
-            prev.map((u) => (Number(u.telegram_id) === telegramId ? { ...u, ...updated } : u))
-            );
-
-            setSuccess("Баланс сброшен.");
-        } catch (e) {
-            setError(String(e.message || e));
-        } finally {
-            setClearingBalanceTelegramId(null);
-            setTimeout(() => setSuccess(""), 2200);
-        }
-    }
+    setAllUsers(Array.isArray(data) ? data : []);
+  } catch (e) {
+    setError(String(e.message || e));
+  } finally {
+    setLoadingAllUsers(false);
+  }
+}
 
     async function loadCategories() {
         try {
@@ -896,7 +874,7 @@ function AdminView() {
     <UsersAllBlock
       users={allUsers}
       loading={loadingAllUsers}
-      onReload={loadAllUsers}
+      onReload={() => loadAllUsers(usersQuery)}
       query={usersQuery}
       onChangeQuery={setUsersQuery}
       onClearBalance={handleClearUserBalance}
