@@ -880,3 +880,40 @@ body {
     }
 }
 
+
+/* ✅ Даем горизонтальный скролл таблице */
+.admin-table-wrapper {
+  overflow-x: auto;      /* вместо hidden */
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ✅ Чтобы таблица не пыталась сжаться в 520px */
+.admin-table {
+  width: 100%;
+  min-width: 720px;      /* подбери: 680–900 */
+  border-collapse: collapse;
+}
+
+/* ✅ Фиксим “прыгающую” ширину и переносы */
+.admin-table__th,
+.admin-table__td {
+  white-space: nowrap;
+}
+
+/* ✅ Первая колонка может переноситься, чтобы меньше раздувать ширину */
+.admin-table__td--user,
+.admin-table__th--user {
+  white-space: normal;
+}
+
+@media (max-width: 420px) {
+  .admin-table__th--date,
+  .admin-table__td--date {
+    display: none;
+  }
+
+  /* если нужно */
+  /* .admin-table__th:nth-child(4),
+     .admin-table__td:nth-child(4) { display:none; } */ /* "Админ" */
+}
