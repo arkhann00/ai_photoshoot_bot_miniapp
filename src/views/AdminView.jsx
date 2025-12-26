@@ -144,6 +144,34 @@ function AdminView() {
     setLoadingAllUsers(false);
   }
 }
+async function handleClearUserBalance(userRow) {
+  const telegramId = Number(userRow?.telegram_id);
+  if (!Number.isFinite(telegramId) || telegramId <= 0) return;
+
+  const label = userRow?.username ? `@${userRow.username}` : `ID ${telegramId}`;
+  if (!window.confirm(`Сбросить баланс пользователю ${label}?`)) return;
+
+  try {
+    setClearingBalanceTelegramId(telegramId);
+    setError("");
+    setSuccess("");
+
+    const updated = await adminClearUserBalance({ telegramId }); // AdminUserResponse
+
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        Number(u.telegram_id) === telegramId ? { ...u, ...updated } : u
+      )
+    );
+
+    setSuccess("Баланс сброшен.");
+  } catch (e) {
+    setError(String(e.message || e));
+  } finally {
+    setClearingBalanceTelegramId(null);
+    setTimeout(() => setSuccess(""), 2200);
+  }
+}
 
     async function loadCategories() {
         try {
