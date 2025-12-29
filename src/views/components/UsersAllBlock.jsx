@@ -11,7 +11,9 @@ export function UsersAllBlock({
   formatDateTime,
 }) {
   const filtered = useMemo(() => {
-    const q = String(query || "").trim().toLowerCase();
+    const q = String(query || "")
+      .trim()
+      .toLowerCase();
     if (!q) return users;
 
     return (users || []).filter((u) => {
@@ -21,10 +23,24 @@ export function UsersAllBlock({
     });
   }, [users, query]);
 
+  const totalUsers = Array.isArray(users) ? users.length : 0;
+  const shownUsers = Array.isArray(filtered) ? filtered.length : 0;
+
   return (
     <section className="admin-section admin-section--users">
       <div className="admin-section__header-row">
-        <h3 className="admin-section__title">Пользователи</h3>
+        <div>
+          <h3 className="admin-section__title">Пользователи</h3>
+          <div className="admin-section__hint" style={{ marginTop: 4 }}>
+            Всего пользователей: <b>{totalUsers}</b>
+            {String(query || "").trim() ? (
+              <>
+                {" "}
+                · найдено: <b>{shownUsers}</b>
+              </>
+            ) : null}
+          </div>
+        </div>
 
         <button
           type="button"
@@ -37,7 +53,8 @@ export function UsersAllBlock({
       </div>
 
       <p className="admin-section__hint">
-        Здесь отображаются все пользователи. Можно быстро найти по username или Telegram ID и сбросить баланс.
+        Здесь отображаются все пользователи. Можно быстро найти по username или
+        Telegram ID и сбросить баланс.
       </p>
 
       <div className="admin-field admin-field--inline">
@@ -53,7 +70,9 @@ export function UsersAllBlock({
         </div>
       </div>
 
-      {loading && <p className="admin-section__hint">Загружаю пользователей…</p>}
+      {loading && (
+        <p className="admin-section__hint">Загружаю пользователей…</p>
+      )}
 
       {!loading && filtered.length === 0 && (
         <p className="admin-section__hint">Пользователи не найдены.</p>
@@ -64,18 +83,25 @@ export function UsersAllBlock({
           <table className="admin-table">
             <thead>
               <tr>
-                <th className="admin-table__th admin-table__th--user">Пользователь</th>
+                <th className="admin-table__th admin-table__th--user">
+                  Пользователь
+                </th>
                 <th className="admin-table__th">Баланс</th>
                 <th className="admin-table__th">Кредиты</th>
                 <th className="admin-table__th">Админ</th>
-                <th className="admin-table__th admin-table__th--date">Создан</th>
-                <th className="admin-table__th admin-table__th--actions">Действия</th>
+                <th className="admin-table__th admin-table__th--date">
+                  Создан
+                </th>
+                <th className="admin-table__th admin-table__th--actions">
+                  Действия
+                </th>
               </tr>
             </thead>
 
             <tbody>
               {filtered.map((u) => {
-                const isClearing = Number(clearingTelegramId) === Number(u.telegram_id);
+                const isClearing =
+                  Number(clearingTelegramId) === Number(u.telegram_id);
                 const balance = Number(u.balance || 0);
 
                 return (
@@ -85,16 +111,24 @@ export function UsersAllBlock({
                         <div className="admin-table__user-main">
                           {u.username ? `@${u.username}` : "Без никнейма"}
                         </div>
-                        <div className="admin-table__user-sub">ID: {u.telegram_id}</div>
+                        <div className="admin-table__user-sub">
+                          ID: {u.telegram_id}
+                        </div>
                       </div>
                     </td>
 
                     <td className="admin-table__td">{balance}</td>
-                    <td className="admin-table__td">{Number(u.photoshoot_credits || 0)}</td>
-                    <td className="admin-table__td">{u.is_admin ? "Да" : "Нет"}</td>
+                    <td className="admin-table__td">
+                      {Number(u.photoshoot_credits || 0)}
+                    </td>
+                    <td className="admin-table__td">
+                      {u.is_admin ? "Да" : "Нет"}
+                    </td>
 
                     <td className="admin-table__td admin-table__td--date">
-                      {formatDateTime ? formatDateTime(u.created_at) : (u.created_at || "—")}
+                      {formatDateTime
+                        ? formatDateTime(u.created_at)
+                        : u.created_at || "—"}
                     </td>
 
                     <td className="admin-table__td admin-table__td--actions">
@@ -103,7 +137,9 @@ export function UsersAllBlock({
                         className="admin-button admin-button--ghost admin-button--xs"
                         disabled={isClearing || balance <= 0}
                         onClick={() => onClearBalance(u)}
-                        title={balance <= 0 ? "Баланс уже 0" : "Сбросить баланс до 0"}
+                        title={
+                          balance <= 0 ? "Баланс уже 0" : "Сбросить баланс до 0"
+                        }
                       >
                         {isClearing ? "Сбрасываю…" : "Сбросить баланс"}
                       </button>
