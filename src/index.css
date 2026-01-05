@@ -924,12 +924,13 @@ body {
     display: none;
   }
 
-  /* УБРАТЬ ЭТО:
-  .admin-table__td--number,
-  .admin-table__td--date { display:none; }
-  */
-
   .admin-table__td--date {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-table__td--number {
+    display: table-cell !important;
   }
 }
