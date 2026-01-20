@@ -48,8 +48,13 @@ body,
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "Segoe UI",
+    sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-main);
@@ -189,8 +194,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: background var(--transition-fast),
-    border-color var(--transition-fast), transform var(--transition-fast),
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
     opacity var(--transition-fast);
 }
 
@@ -262,7 +269,9 @@ body {
   align-items: center;
   gap: 2px;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .bottom-nav__btn--active {
@@ -552,7 +561,9 @@ body {
   color: var(--text-soft);
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .admin-main-tabs__btn--active {
@@ -593,7 +604,9 @@ body {
   font-size: 12px;
   color: var(--text-soft);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .admin-mode-tabs__btn--active {
@@ -787,8 +800,10 @@ body {
   cursor: pointer;
   background: #111827;
   color: var(--text-main);
-  transition: background var(--transition-fast),
-    border-color var(--transition-fast), opacity var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    opacity var(--transition-fast);
 }
 
 .admin-button--primary {
@@ -1219,5 +1234,86 @@ body {
 @media (max-width: 480px) {
   .admin-table__td--number {
     display: table-cell !important;
+  }
+}
+
+/* Расширяемая строка */
+.admin-table__tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.admin-table__tr:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.admin-table__tr--expanded {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Иконка раскрытия */
+.admin-table__expand-icon {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.admin-table__tr--expanded .admin-table__expand-icon {
+  transform: rotate(0deg);
+}
+
+/* Подтаблица рефералов */
+.admin-table__tr--subreferrals {
+  background: rgba(248, 250, 252, 1);
+  border-top: 2px solid rgba(59, 130, 246, 0.2);
+}
+
+.admin-table__td--subreferrals {
+  padding: 16px 0;
+  background: transparent;
+}
+
+.admin-subreferrals-table {
+  margin-top: 12px;
+}
+
+.admin-table--nested {
+  font-size: 0.9em;
+  border: none;
+  box-shadow: none;
+}
+
+.admin-table--nested .admin-table__th,
+.admin-table--nested .admin-table__td {
+  padding: 8px 12px;
+}
+
+.admin-table__th--user-small,
+.admin-table__td--user-small {
+  width: 70%;
+}
+
+.admin-table__th--money-small,
+.admin-table__td--money-small {
+  width: 30%;
+  text-align: right;
+}
+
+.admin-table__user-sub {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .admin-table__expand-icon {
+    display: none;
+  }
+
+  .admin-table--nested {
+    font-size: 0.8em;
   }
 }
