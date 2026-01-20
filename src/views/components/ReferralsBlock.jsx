@@ -42,6 +42,123 @@ export function ReferralsBlock({
     loadSubReferrals(telegramId);
   };
 
+  const downloadCsv = () => {
+    const rows = [];
+
+    // header
+    rows.push([
+      "referrer_telegram_id",
+      "referrer_username",
+      "telegram_id",
+      "username",
+      "earned_rub",
+      "level",
+    ]);
+
+    referrals.forEach((ref) => {
+      // level 1
+      rows.push([
+        "", // у корневых нет реферера
+        "",
+        ref.telegram_id,
+        ref.username ?? "",
+        ref.earned_rub ?? 0,
+        1,
+      ]);
+
+      // level 2 (подрефералы)
+      const subs = subReferrals[ref.telegram_id] ?? [];
+      subs.forEach((sub) => {
+        rows.push([
+          ref.telegram_id,
+          ref.username ?? "",
+          sub.telegram_id,
+          sub.username ?? "",
+          sub.earned_rub ?? 0,
+          2,
+        ]);
+      });
+    });
+
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `referrals_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadUserCsv = (ref) => {
+    const subs = subReferrals[ref.telegram_id];
+
+    if (!subs) {
+      alert("Сначала раскрой пользователя, чтобы загрузить его рефералов");
+      return;
+    }
+
+    const rows = [];
+
+    rows.push([
+      // "id реферала",
+      // "username реферала",
+      "telegram_id",
+      "username",
+      "earned_rub",
+      "level",
+    ]);
+
+    // сам пользователь (level 1)
+    rows.push([
+      // "",
+      // "",
+      ref.telegram_id,
+      ref.username ?? "",
+      ref.earned_rub ?? 0,
+      1,
+    ]);
+
+    // его рефералы (level 2)
+    subs.forEach((sub) => {
+      rows.push([
+        // ref.telegram_id,
+        // ref.username ?? "",
+        sub.telegram_id,
+        sub.username ?? "",
+        sub.earned_rub ?? 0,
+        2,
+      ]);
+    });
+
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `referrals_${ref.telegram_id}.csv`;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section className="admin-section admin-section--users">
       <div className="admin-section__header-row">
@@ -135,15 +252,12 @@ export function ReferralsBlock({
                     : 0;
                 const earnedRub =
                   typeof row.earned_rub === "number" ? row.earned_rub : 0;
-                const hasSubReferrals =
-                  subReferrals[row.telegram_id]?.length > 0;
                 const isExpanded = expandedUserId === row.telegram_id;
                 const isLoadingSub = subReferralsLoading === row.telegram_id;
 
                 return (
-                  <>
+                  <React.Fragment key={row.telegram_id}>
                     <tr
-                      key={row.telegram_id}
                       className={`admin-table__tr ${isExpanded ? "admin-table__tr--expanded" : ""}`}
                       onClick={() => toggleSubReferrals(row.telegram_id)}
                     >
@@ -171,7 +285,10 @@ export function ReferralsBlock({
                     </tr>
 
                     {isExpanded && (
-                      <tr className="admin-table__tr admin-table__tr--subreferrals">
+                      <tr
+                        key={`sub-${row.telegram_id}`}
+                        className="admin-table__tr admin-table__tr--subreferrals"
+                      >
                         <td
                           colSpan={3}
                           className="admin-table__td admin-table__td--subreferrals"
@@ -184,6 +301,24 @@ export function ReferralsBlock({
                             <div className="admin-subreferrals-table">
                               <table className="admin-table admin-table--nested">
                                 <thead>
+                                  <div className="admin-table__user-actions">
+                                    <button
+                                      type="button"
+                                      className="admin-button admin-button--ghost admin-button--xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        downloadUserCsv(row);
+                                      }}
+                                      disabled={!subReferrals[row.telegram_id]}
+                                      title={
+                                        subReferrals[row.telegram_id]
+                                          ? "Скачать CSV"
+                                          : "Сначала раскрой пользователя"
+                                      }
+                                    >
+                                      Все рефрелы в формате CSV
+                                    </button>
+                                  </div>
                                   <tr>
                                     <th className="admin-table__th admin-table__th--user-small">
                                       Подреферал
@@ -229,7 +364,7 @@ export function ReferralsBlock({
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
